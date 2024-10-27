@@ -11,6 +11,7 @@ import org.locationtech.jts.geom.Point;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -82,5 +83,8 @@ public class EventService {
     }
     public List<Event> getNearbyEvents(double latitude, double longitude, double distance) {
         return eventRepository.findEventsNearby(latitude, longitude, distance);
+    }
+    public List<Event> getEventsBetweenDates(LocalDateTime startDate, LocalDateTime endDate) {
+        return eventRepository.findByStartDateAfterAndEndDateBefore(startDate, endDate);
     }
 }

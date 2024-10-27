@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -99,5 +100,14 @@ public class EventController {
                 .map(Event::toDto)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(nearbyEventDtos);
+    }
+    @GetMapping("/between")
+    public List<EventDto> getEventsBetweenDates(@RequestParam String startDate, @RequestParam String endDate) {
+        LocalDateTime startDateTime = LocalDateTime.parse(startDate);
+        LocalDateTime endDateTime = LocalDateTime.parse(endDate);
+
+       List <Event> events= eventService.getEventsBetweenDates(startDateTime,endDateTime);
+       List<EventDto> eventDtos = events.stream().map(Event::toDto).collect(Collectors.toList());
+       return eventDtos;
     }
 }

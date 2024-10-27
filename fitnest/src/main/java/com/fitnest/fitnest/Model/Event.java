@@ -3,12 +3,17 @@ package com.fitnest.fitnest.Model;
 import com.fitnest.fitnest.Dto.EventDto;
 import com.fitnest.fitnest.Dto.LocationDto;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 
 import java.time.LocalDateTime;
 
+@Data
+@AllArgsConstructor
 @Entity
 public class Event {
 
@@ -48,70 +53,6 @@ public class Event {
         this.sportCategory = sportCategory; // Initialize sportCategory
     }
 
-    // Getters and Setters
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public LocalDateTime getStartDate() {
-        return startDate;
-    }
-
-    public void setStartDate(LocalDateTime startDate) {
-        this.startDate = startDate;
-    }
-
-    public LocalDateTime getEndDate() {
-        return endDate;
-    }
-
-    public void setEndDate(LocalDateTime endDate) {
-        this.endDate = endDate;
-    }
-
-    public String getLocationName() {
-        return locationName;
-    }
-
-    public void setLocationName(String locationName) {
-        this.locationName = locationName;
-    }
-
-    public Point getLocation() {
-        return location;
-    }
-
-    public void setLocation(Point location) {
-        this.location = location;
-    }
-
-    public SportCategory getSportCategory() {
-        return sportCategory;
-    }
-
-    public void setSportCategory(SportCategory sportCategory) {
-        this.sportCategory = sportCategory;
-    }
 
     // Convert Event to EventDto
     public EventDto toDto() {

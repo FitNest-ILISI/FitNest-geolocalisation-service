@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -28,6 +29,9 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
         List<Event> findBySportCategory(SportCategory sportCategory);
 
+        @Query("SELECT e FROM Event e WHERE e.startDate >= :startDate AND e.endDate <= :endDate")
+        List<Event> findByStartDateAfterAndEndDateBefore(@Param("startDate") LocalDateTime startDate,
+                                                         @Param("endDate") LocalDateTime endDate);
 }
 
 
