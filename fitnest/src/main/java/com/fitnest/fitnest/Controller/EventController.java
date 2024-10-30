@@ -8,6 +8,7 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -110,4 +111,29 @@ public class EventController {
        List<EventDto> eventDtos = events.stream().map(Event::toDto).collect(Collectors.toList());
        return eventDtos;
     }
+    @GetMapping("/filterByDate")
+    public ResponseEntity<List<EventDto>> getEventsByDateFilter(@RequestParam("filter") String filter) {
+        List<Event> events;
+
+        switch (filter.toLowerCase()) {
+            case "today":
+                events = eventService.getEventsForToday();
+                break;
+            case "tomorrow":
+                events = eventService.getEventsForTomorrow();
+                break;
+            case "thisweek":
+                events = eventService.getEventsForThisWeek();
+                break;
+            case "afterthisweek":
+                events = eventService.getEventsAfterThisWeek();
+                break;
+            default:
+                return ResponseEntity.badRequest().build();
+        }
+
+        List<EventDto> eventDtos = events.stream().map(Event::toDto).collect(Collectors.toList());
+        return ResponseEntity.ok(eventDtos);
+    }
+
 }

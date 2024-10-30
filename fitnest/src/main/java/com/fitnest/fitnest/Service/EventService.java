@@ -11,7 +11,9 @@ import org.locationtech.jts.geom.Point;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -86,5 +88,28 @@ public class EventService {
     }
     public List<Event> getEventsBetweenDates(LocalDateTime startDate, LocalDateTime endDate) {
         return eventRepository.findByStartDateAfterAndEndDateBefore(startDate, endDate);
+    }
+    public List<Event> getEventsForToday() {
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        System.out.println(startOfDay);
+        LocalDateTime endOfDay = startOfDay.plusDays(1).minusSeconds(1);
+        System.out.println(endOfDay);
+        return eventRepository.findByStartDateBetween(startOfDay, endOfDay);
+    }
+
+    public List<Event> getEventsForTomorrow() {
+        LocalDateTime startOfTomorrow = LocalDate.now().plusDays(1).atStartOfDay();
+        LocalDateTime endOfTomorrow = startOfTomorrow.plusDays(1).minusSeconds(1);
+        return eventRepository.findByStartDateBetween(startOfTomorrow, endOfTomorrow);
+    }
+
+    public List<Event> getEventsForThisWeek() {
+        LocalDateTime startOfWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)).atStartOfDay();
+        LocalDateTime endOfWeek = startOfWeek.plusWeeks(1).minusSeconds(1);
+        return eventRepository.findByStartDateBetween(startOfWeek, endOfWeek);
+    }
+    public List<Event> getEventsAfterThisWeek() {
+        LocalDateTime startOfNextWeek = LocalDate.now().with(TemporalAdjusters.next(java.time.DayOfWeek.MONDAY)).atStartOfDay();
+        return eventRepository.findByStartDateAfter(startOfNextWeek);
     }
 }
