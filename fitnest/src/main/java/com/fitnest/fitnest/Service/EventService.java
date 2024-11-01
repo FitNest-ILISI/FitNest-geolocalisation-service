@@ -33,7 +33,6 @@ public class EventService {
     public Event saveEvent(Event event) {
         return eventRepository.save(event);
     }
-
     // Enregistrer plusieurs événements
     public List<Event> saveMultipleEvents(List<EventDto> eventRequests) {
         List<Event> savedEvents = new ArrayList<>();
@@ -52,6 +51,10 @@ public class EventService {
             event.setLocationName(eventRequest.getLocationName());
             event.setStartDate(eventRequest.getStartDate());
             event.setEndDate(eventRequest.getEndDate());
+
+            // Définir maxParticipants et currentNumParticipants
+            event.setMaxParticipants(eventRequest.getMaxParticipants());
+            event.setCurrentNumParticipants(eventRequest.getCurrentNumParticipants());
 
             // Trouver la catégorie de sport
             Optional<SportCategory> sportCategory = sportCategoryRepository.findByName(eventRequest.getSportCategory());

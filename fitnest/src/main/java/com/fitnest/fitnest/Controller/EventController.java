@@ -12,10 +12,16 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -33,24 +39,23 @@ public class EventController {
         List<EventDto> eventDtos = events.stream().map(Event::toDto).collect(Collectors.toList());
         return ResponseEntity.ok(eventDtos);
     }
-
-
     @PostMapping("/create")
     public ResponseEntity<EventDto> createEvent(@RequestBody EventDto eventDto) {
         if (eventDto.getLocation() == null || eventDto.getName() == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); // Vérifier les champs obligatoires
+            return ResponseEntity.badRequest().body(null); // Informative response could be better
         }
 
-        // Trouver la catégorie de sport par nom
-        Optional<SportCategory> sportCategory = eventService.getSportCategoryByName(eventDto.getSportCategory());
-        if (sportCategory.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); // Gérer les catégories invalides
+        // Find the sport category by name
+        Optional<SportCategory> sportCategoryOpt = eventService.getSportCategoryByName(eventDto.getSportCategory());
+        if (sportCategoryOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(null);
         }
 
         Point location = geometryFactory.createPoint(
                 new Coordinate(eventDto.getLocation().getLongitude(), eventDto.getLocation().getLatitude())
         );
 
+        // Create a new event
         Event event = new Event(
                 eventDto.getName(),
                 eventDto.getDescription(),
@@ -58,14 +63,25 @@ public class EventController {
                 eventDto.getEndDate(),
                 eventDto.getLocationName(),
                 location,
-                sportCategory.get() // Passer la catégorie de sport trouvée
+                sportCategoryOpt.get(),
+                eventDto.getImagePath()
         );
 
-        Event createdEvent = eventService.saveEvent(event);
-        EventDto createdEventDto = createdEvent.toDto();
+        // Set participants
+        event.setMaxParticipants(eventDto.getMaxParticipants());
+        event.setCurrentNumParticipants(eventDto.getCurrentNumParticipants());
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdEventDto);
+        try {
+            Event createdEvent = eventService.saveEvent(event);
+            EventDto createdEventDto = createdEvent.toDto();
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdEventDto);
+        } catch (Exception e) {
+            e.printStackTrace(); // Log the exception
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
+
+
     @PostMapping("/createMultiple")
     public ResponseEntity<List<EventDto>> createMultipleEvents(@RequestBody List<EventDto> eventRequests) {
         // Vérifier si la liste d'événements est vide
@@ -135,5 +151,17 @@ public class EventController {
         List<EventDto> eventDtos = events.stream().map(Event::toDto).collect(Collectors.toList());
         return ResponseEntity.ok(eventDtos);
     }
+    @PostMapping("/upload-image")
+    public ResponseEntity<String> uploadImage(@RequestParam("file") MultipartFile file) throws IOException {
+        String uploadDir = "path/to/upload/dir"; // Define the path where images will be stored
+        String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+
+        Path path = Paths.get(uploadDir, fileName);
+        Files.createDirectories(path.getParent());
+        Files.write(path, file.getBytes());
+        String imagePath = "/uploads/" + fileName; // Modify according to your setup
+        return ResponseEntity.ok(imagePath);
+    }
+
 
 }

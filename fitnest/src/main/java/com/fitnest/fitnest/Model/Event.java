@@ -10,7 +10,9 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Data
 @AllArgsConstructor
@@ -23,49 +25,60 @@ public class Event {
 
     private String name;
     private String description;
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
+    private LocalDate startDate;
+    private LocalDate endDate;
     private String locationName;
+    private int maxParticipants;
+    private int currentNumParticipants;
+    private LocalTime startTime;
+
+
+    // Field to store the image path
+    private String imagePath;
 
     // Geolocation field for storing coordinates
     @Column(columnDefinition = "GEOGRAPHY(Point, 4326)")
     private Point location;
 
-    private static final GeometryFactory geometryFactory = new GeometryFactory(); // Add the GeometryFactory
+    private static final GeometryFactory geometryFactory = new GeometryFactory();
 
     @ManyToOne
     @JoinColumn(name = "sport_category_id")
-    private SportCategory sportCategory; // Add SportCategory field
+    private SportCategory sportCategory;
 
     // Default constructor
     public Event() {
     }
 
     // Constructor with parameters
-    public Event(String name, String description, LocalDateTime startDate, LocalDateTime endDate,
-                 String locationName, Point location, SportCategory sportCategory) {
+    public Event(String name, String description, LocalDate startDate, LocalDate endDate,
+                 String locationName, Point location, SportCategory sportCategory, String imagePath) {
         this.name = name;
         this.description = description;
         this.startDate = startDate;
         this.endDate = endDate;
         this.locationName = locationName;
         this.location = location;
-        this.sportCategory = sportCategory; // Initialize sportCategory
+        this.sportCategory = sportCategory;
+        this.imagePath = imagePath; // Initialize imagePath
     }
-
 
     // Convert Event to EventDto
     public EventDto toDto() {
         EventDto dto = new EventDto();
         dto.setName(this.name);
         dto.setDescription(this.description);
-        dto.setLocation(new LocationDto()); // Initialize LocationDto
-        dto.getLocation().setLatitude(this.location.getY()); // Set latitude
-        dto.getLocation().setLongitude(this.location.getX()); // Set longitude
+        dto.setLocation(new LocationDto());
+        dto.getLocation().setLatitude(this.location.getY());
+        dto.getLocation().setLongitude(this.location.getX());
         dto.setLocationName(this.locationName);
         dto.setStartDate(this.startDate);
         dto.setEndDate(this.endDate);
-        dto.setSportCategory(this.sportCategory != null ? this.sportCategory.getName() : null); // Convert SportCategory to String
+        dto.setSportCategory(this.sportCategory != null ? this.sportCategory.getName() : null);
+        dto.setMaxParticipants(this.maxParticipants);
+        dto.setCurrentNumParticipants(this.currentNumParticipants);
+        dto.setImagePath(this.imagePath); // Add imagePath to DTO
+
         return dto;
     }
 
