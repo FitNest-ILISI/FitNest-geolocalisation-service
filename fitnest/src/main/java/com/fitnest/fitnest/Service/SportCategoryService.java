@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class SportCategoryService {
@@ -18,5 +19,8 @@ public class SportCategoryService {
 
     public List<SportCategory> getAllCategories() {
         return sportCategoryRepository.findAll();
+    }
+    public Optional<SportCategory> getCategoryById(Long id) {
+        return sportCategoryRepository.findById(id);
     }
 }
