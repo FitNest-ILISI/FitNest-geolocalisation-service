@@ -7,24 +7,33 @@ import com.fitnest.fitnest.Model.SportCategory;
 import com.fitnest.fitnest.Service.EventService;
 import com.fitnest.fitnest.Service.LocationService;
 import com.fitnest.fitnest.Service.SportCategoryService;
+import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.LineString; // Change import statement accordingly
+import org.locationtech.jts.geom.Point;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.geolatte.geom.G2D;
+import org.geolatte.geom.builder.DSL;
+
+
+import static org.geolatte.geom.crs.CoordinateReferenceSystems.WGS84;
+
 
 @RestController
 @RequestMapping("/api/events")
@@ -43,53 +52,64 @@ public class EventController {
     @GetMapping("/getAllEvents")
     public ResponseEntity<List<EventDto>> getAllEvents() {
         List<Event> events = eventService.getAllEvents();
-        List<EventDto> eventDtos = events.stream().map(Event::toDto).collect(Collectors.toList());
+        List<EventDto> eventDtos = events.stream()
+                .map(event -> {
+                    EventDto dto = event.toDto();
+
+                    return dto;
+                })
+                .collect(Collectors.toList());
         return ResponseEntity.ok(eventDtos);
     }
     @PostMapping("/create")
     public ResponseEntity<EventDto> createEvent(@RequestBody EventDto eventDto) {
-        // Vérification des champs requis
-        if (eventDto.getLocationId() == null || eventDto.getName() == null) {
-            return ResponseEntity.badRequest().body(null); // Bad request si les données sont incomplètes
+        // Vérifiez que cityName est bien présent
+        if (eventDto.getCityName() == null || eventDto.getCityName().isEmpty()) {
+            return ResponseEntity.badRequest().body(null);
         }
 
-        // Récupérer la catégorie de sport par ID
-        Optional<SportCategory> sportCategory = sportCategoryService.getCategoryById(eventDto.getSportCategoryId());
-        if (sportCategory.isEmpty()) {
-            return ResponseEntity.badRequest().body(null); // Bad request si la catégorie n'existe pas
-        }
+        // Récupération de la catégorie sportive
+        SportCategory sportCategory = sportCategoryService.getCategoryById(eventDto.getSportCategoryId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sport category not found"));
 
-        // Récupérer l'objet Location par ID
-        Location location = locationService.getLocationById(eventDto.getLocationId());
-        if (location == null) {
-            return ResponseEntity.badRequest().body(null); // Bad request si la localisation n'est pas trouvée
-        }
-
-        // Création d'un nouvel événement
-        Event event = new Event(
-                eventDto.getName(),
-                eventDto.getDescription(),
-                eventDto.getStartDate(),
-                eventDto.getEndDate(),
-                eventDto.getStartTime(), // Passer le startTime
-                location, // Utiliser la localisation récupérée
-                sportCategory.get(), // Obtenir l'objet SportCategory
-                eventDto.getImagePath()
-        );
-
-        // Définir les participants
+        // Création de l'événement
+        Event event = new Event();
+        event.setName(eventDto.getName());
+        event.setDescription(eventDto.getDescription());
+        event.setStartDate(eventDto.getStartDate());
+        event.setEndDate(eventDto.getEndDate());
+        event.setStartTime(eventDto.getStartTime());
         event.setMaxParticipants(eventDto.getMaxParticipants());
-        event.setCurrentNumParticipants(eventDto.getCurrentNumParticipants());
+        event.setCurrentNumParticipants(0); // Initialisation à 0
+        event.setImagePath(eventDto.getImagePath());
+        event.setSportCategory(sportCategory);
+        event.setCityName(eventDto.getCityName()); // Vérification de la valeur ici
 
-        try {
-            // Enregistrer l'événement
-            Event createdEvent = eventService.saveEvent(event);
-            EventDto createdEventDto = createdEvent.toDto(); // Convertir en DTO
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdEventDto); // Retourner l'événement créé
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // Erreur interne du serveur
+        LineString route  = toLineString(geometryFactory, eventDto.getRouteCoordinates());
+        route.setSRID(4326);
+
+        if (eventDto.getLatitude() != 0 && eventDto.getLongitude() != 0) {
+            Point location = geometryFactory.createPoint(new Coordinate(eventDto.getLongitude(), eventDto.getLatitude()));
+            location.setSRID(4326);
+            event.setLocation(location);
         }
+        event.setChemin(route);
+
+        // Sauvegarde de l'événement
+        Event savedEvent = eventService.saveEvent(event);
+
+        // Retour de l'événement sauvegardé en DTO
+        EventDto savedEventDto = savedEvent.toDto();
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedEventDto);
+    }
+
+    public LineString toLineString(GeometryFactory geometryFactory, List<double[]> coordinates) {
+        List<Coordinate> coordList = new ArrayList<>();
+        for (double[] coord : coordinates) {
+            coordList.add(new Coordinate(coord[1], coord[0])); // Longitude, Latitude
+        }
+        Coordinate[] coordsArray = coordList.toArray(new Coordinate[0]);
+        return geometryFactory.createLineString(coordsArray);
     }
 
     @PostMapping("/createMultiple")
@@ -116,6 +136,7 @@ public class EventController {
         List<EventDto> eventDtos = events.stream().map(Event::toDto).collect(Collectors.toList());
         return ResponseEntity.ok(eventDtos);
     }
+
 
     @GetMapping("/nearby")
     public ResponseEntity<List<EventDto>> getNearbyEvents(
@@ -183,4 +204,47 @@ public class EventController {
         String imagePath = "/uploads/" + fileName; // Modify according to your setup
         return ResponseEntity.ok(imagePath);
     }
+    @GetMapping("/filterByCategoryAndDate")
+    public ResponseEntity<List<EventDto>> getEventsByCategoryAndDateFilter(
+            @RequestParam("categoryName") String categoryName,
+            @RequestParam("filter") String filter) {
+
+        // Filtrer les événements par catégorie
+        List<Event> eventsByCategory = eventService.getEventsBySportCategory(categoryName);
+        List<Event> filteredEvents;
+
+        // Filtrer par date selon le paramètre "filter"
+        switch (filter.toLowerCase()) {
+            case "today":
+                filteredEvents = eventService.getEventsForToday().stream()
+                        .filter(eventsByCategory::contains)
+                        .collect(Collectors.toList());
+                break;
+            case "tomorrow":
+                filteredEvents = eventService.getEventsForTomorrow().stream()
+                        .filter(eventsByCategory::contains)
+                        .collect(Collectors.toList());
+                break;
+            case "thisweek":
+                filteredEvents = eventService.getEventsThisWeek().stream()
+                        .filter(eventsByCategory::contains)
+                        .collect(Collectors.toList());
+                break;
+            case "afterthisweek":
+                filteredEvents = eventService.getEventsAfterThisWeek().stream()
+                        .filter(eventsByCategory::contains)
+                        .collect(Collectors.toList());
+                break;
+            default:
+                return ResponseEntity.badRequest().build();
+        }
+
+        // Convertir les événements filtrés en DTOs et renvoyer la réponse
+        List<EventDto> eventDtos = filteredEvents.stream()
+                .map(Event::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(eventDtos);
+    }
+
+
 }

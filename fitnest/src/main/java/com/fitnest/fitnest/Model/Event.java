@@ -1,17 +1,25 @@
 package com.fitnest.fitnest.Model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fitnest.fitnest.Dto.EventDto;
+import com.fitnest.fitnest.Service.LocalTimeDeserializer;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.geom.Point;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 @Entity
 public class Event {
 
@@ -20,68 +28,89 @@ public class Event {
     private Long id;
 
     private String name;
+
+    @Column(columnDefinition = "TEXT")
     private String description;
+
     private LocalDate startDate;
     private LocalDate endDate;
+
     private int maxParticipants;
     private int currentNumParticipants;
+
+    @JsonFormat(pattern = "HH:mm:ss")
+    @JsonDeserialize(using = LocalTimeDeserializer.class)
     private LocalTime startTime;
 
+    @Column(columnDefinition = "TEXT")
     private String imagePath;
 
-    // Relation avec Location (modifié à ManyToOne)
-    @ManyToOne
-    @JoinColumn(name = "location_id", referencedColumnName = "id")
-    @JsonIgnore
-    private Location location;
+    // Champ pour stocker la localisation sous forme de point géographique
+    @Column(name = "location", columnDefinition = "geometry(Point, 4326)")
+    private Point location;
+
+    // Nouveau champ pour le nom de la ville
+    private String cityName;
 
     @ManyToOne
     @JoinColumn(name = "sport_category_id")
     private SportCategory sportCategory;
 
-    public Event() {}
+    @Column(name = "chemin", columnDefinition = "geometry(LineString, 4326)")
+    private LineString chemin;
 
     public Event(String name, String description, LocalDate startDate, LocalDate endDate,
-                 LocalTime startTime,
-                 Location location, SportCategory sportCategory, String imagePath) {
+                 LocalTime startTime, Point location, String cityName, SportCategory sportCategory,
+                 String imagePath, LineString chemin) {
         this.name = name;
         this.description = description;
         this.startDate = startDate;
         this.endDate = endDate;
+        this.startTime = startTime;
+
+        // Assurez-vous que le Point a bien le bon SRID (4326)
+        if (location != null) {
+            location.setSRID(4326);
+        }
         this.location = location;
+
+        this.cityName = cityName;
         this.sportCategory = sportCategory;
         this.imagePath = imagePath;
-        this.startTime=startTime;
+
+        // Assurez-vous que le LineString a bien le bon SRID (4326)
+        if (chemin != null) {
+            chemin.setSRID(4326);
+        }
+        this.chemin = chemin;
     }
 
 
     public EventDto toDto() {
-        EventDto dto = new EventDto();
-        dto.setId(this.id);
-        dto.setName(this.name);
-        dto.setDescription(this.description);
-        dto.setStartDate(this.startDate);
-        dto.setEndDate(this.endDate);
-        dto.setStartTime(this.startTime);
-        dto.setMaxParticipants(this.maxParticipants);
-        dto.setCurrentNumParticipants(this.currentNumParticipants);
-        dto.setImagePath(this.imagePath);
+        EventDto eventDto = new EventDto();
+        eventDto.setId(this.id);
+        eventDto.setName(this.name);
+        eventDto.setDescription(this.description);
+        eventDto.setStartDate(this.startDate);
+        eventDto.setEndDate(this.endDate);
+        eventDto.setStartTime(this.startTime);
+        eventDto.setMaxParticipants(this.maxParticipants);
+        eventDto.setCurrentNumParticipants(this.currentNumParticipants);
+        eventDto.setImagePath(this.imagePath);
+        eventDto.setSportCategoryId(this.sportCategory.getId());
+        eventDto.setSportCategoryName(this.sportCategory.getName());
+        eventDto.setCityName(this.cityName);
+        eventDto.setLatitude(this.location.getY()); // Latitude
+        eventDto.setLongitude(this.location.getX()); // Longitude
 
-        // Remplir les informations de la catégorie sportive
-        if (this.sportCategory != null) {
-            dto.setSportCategoryName(this.sportCategory.getName());
+        if (this.chemin != null) {
+            List<double[]> coordinates = new ArrayList<>();
+            for (Coordinate coordinate : this.chemin.getCoordinates()) {
+                coordinates.add(new double[]{coordinate.y, coordinate.x}); // [latitude, longitude]
+            }
+            eventDto.setRouteCoordinates(coordinates);
         }
 
-        // Remplir les informations de localisation
-        if (this.location != null) {
-            dto.setLocationId(this.location.getId());
-            dto.setLocationName(this.location.getLocationName()); // Nom de la localisation
-            dto.setLatitude(this.location.getLatitude()); // Latitude
-            dto.setLongitude(this.location.getLongitude()); // Longitude
-        }
-
-        return dto;
+        return eventDto;
     }
-
-
 }

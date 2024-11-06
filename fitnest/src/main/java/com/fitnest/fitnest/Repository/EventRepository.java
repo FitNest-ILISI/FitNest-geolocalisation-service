@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Repository
@@ -32,4 +33,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
         // Corrected method for finding events after this week
         @Query("SELECT e FROM Event e WHERE e.startDate >= :date")
         List<Event> findEventsAfterThisWeek(@Param("date") LocalDate date);
+
+        @Query("SELECT e FROM Event e WHERE e.startTime BETWEEN :startTime AND :endTime")
+        List<Event> findByTimeRange(@Param("startTime") LocalTime startTime, @Param("endTime") LocalTime endTime);
 }

@@ -2,6 +2,9 @@ package com.fitnest.fitnest.Model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.springframework.http.ResponseEntity;
+
+import java.util.Optional;
 
 @Data
 @Entity
