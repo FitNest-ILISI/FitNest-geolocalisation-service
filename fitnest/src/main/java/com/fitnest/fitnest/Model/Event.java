@@ -97,8 +97,13 @@ public class Event {
         eventDto.setMaxParticipants(this.maxParticipants);
         eventDto.setCurrentNumParticipants(this.currentNumParticipants);
         eventDto.setImagePath(this.imagePath);
-        eventDto.setSportCategoryId(this.sportCategory.getId());
-        eventDto.setSportCategoryName(this.sportCategory.getName());
+        if (this.sportCategory != null) {
+            eventDto.setSportCategoryId(this.sportCategory.getId());
+            eventDto.setSportCategoryName(this.sportCategory.getName());
+        } else {
+            eventDto.setSportCategoryId(null);
+            eventDto.setSportCategoryName("Non spécifié");
+        }
         eventDto.setCityName(this.cityName);
         eventDto.setLatitude(this.location.getY()); // Latitude
         eventDto.setLongitude(this.location.getX()); // Longitude
@@ -113,4 +118,6 @@ public class Event {
 
         return eventDto;
     }
+
+
 }

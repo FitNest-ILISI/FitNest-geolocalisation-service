@@ -48,6 +48,13 @@ public class EventController {
     @Autowired
     private SportCategoryService sportCategoryService;
 
+    @GetMapping("/{id}")
+    public ResponseEntity<EventDto> getEventById(@PathVariable Long id) {
+        Event event = eventService.getEventById(id) ;
+        EventDto eventDto = event.toDto();
+        return ResponseEntity.ok(eventDto);
+    }
+
 
     @GetMapping("/getAllEvents")
     public ResponseEntity<List<EventDto>> getAllEvents() {
